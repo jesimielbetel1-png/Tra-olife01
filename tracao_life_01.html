@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tração Life 0.1 — Diagnóstico de Vida</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --musgo:#3d5a3a;
+  --musgo-dark:#2a3f27;
+  --musgo-deep:#1e2e1c;
+  --ouro:#c9a94a;
+  --ouro-claro:#e0c376;
+  --branco:#fafaf5;
+  --creme:#f3efe3;
+  --cinza:#6b6b66;
+  --erro:#a33a2a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--musgo-deep);min-height:100vh;font-family:Georgia,'Times New Roman',serif;color:var(--branco);line-height:1.6}
+body{background:
+  radial-gradient(ellipse at top left, rgba(201,169,74,0.08), transparent 50%),
+  radial-gradient(ellipse at bottom right, rgba(61,90,58,0.4), transparent 50%),
+  var(--musgo-deep);
+  padding:20px 12px}
+
+.wrap{max-width:820px;margin:0 auto}
+
+/* ====== HEADER / LOGO ====== */
+.brand{display:flex;align-items:center;justify-content:space-between;padding:16px 0 24px;border-bottom:1px solid rgba(201,169,74,0.25);margin-bottom:32px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{width:48px;height:48px;border:2px solid var(--ouro);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--ouro);font-family:Georgia,serif;font-size:20px;letter-spacing:-1px}
+.logo-text{font-family:'Playfair Display',Georgia,serif;font-size:18px;letter-spacing:2px;color:var(--branco);text-transform:uppercase}
+.logo-text span{color:var(--ouro);font-weight:bold}
+.version{font-size:11px;color:var(--ouro);letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif}
+
+/* ====== CAPA ====== */
+.capa{text-align:center;padding:50px 20px 40px;border:1px solid rgba(201,169,74,0.3);background:linear-gradient(180deg, rgba(61,90,58,0.3), rgba(30,46,28,0.3));margin-bottom:32px}
+.capa .label{color:var(--ouro);font-size:12px;letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;font-family:Arial,sans-serif}
+.capa h1{font-size:42px;font-weight:normal;letter-spacing:-1px;margin-bottom:14px;color:var(--branco);font-family:Georgia,serif}
+.capa h1 em{color:var(--ouro);font-style:italic}
+.capa p{max-width:480px;margin:0 auto;color:rgba(250,250,245,0.75);font-size:15px}
+.capa .ornament{color:var(--ouro);font-size:20px;letter-spacing:8px;margin:20px 0}
+
+/* ====== PROGRESSO ====== */
+.progresso{display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap}
+.pill{flex:1;min-width:25px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;position:relative}
+.pill.done{background:var(--ouro)}
+.pill.active{background:linear-gradient(90deg,var(--ouro),var(--ouro-claro));animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* ====== SEÇÕES ====== */
+.secao{display:none;background:rgba(250,250,245,0.03);border:1px solid rgba(201,169,74,0.2);padding:32px 28px;margin-bottom:24px;animation:slideIn 0.4s ease}
+.secao.ativa{display:block}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.secao-head{border-bottom:1px solid rgba(201,169,74,0.2);padding-bottom:18px;margin-bottom:26px}
+.secao-num{color:var(--ouro);font-size:11px;letter-spacing:3px;font-family:Arial,sans-serif;text-transform:uppercase;margin-bottom:6px}
+.secao-titulo{font-size:26px;color:var(--branco);font-family:Georgia,serif;font-weight:normal}
+.secao-titulo em{color:var(--ouro);font-style:italic}
+.secao-sub{color:rgba(250,250,245,0.65);font-size:14px;margin-top:8px;font-style:italic}
+
+/* ====== CAMPOS ====== */
+.campo{margin-bottom:24px}
+.campo label{display:block;font-size:14px;color:var(--ouro-claro);margin-bottom:10px;font-family:Arial,sans-serif;letter-spacing:0.5px}
+.campo label .obr{color:var(--ouro);margin-left:3px}
+.campo input[type=text],
+.campo input[type=number],
+.campo textarea{width:100%;background:rgba(0,0,0,0.25);border:1px solid rgba(201,169,74,0.3);padding:13px 14px;color:var(--branco);font-family:Georgia,serif;font-size:15px;border-radius:2px;transition:all 0.2s}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--ouro);background:rgba(0,0,0,0.35)}
+.campo textarea{min-height:90px;resize:vertical;line-height:1.5}
+.campo .dica{font-size:12px;color:var(--cinza);margin-top:6px;font-style:italic}
+
+/* ====== ESCALA ====== */
+.escala{display:grid;grid-template-columns:repeat(11,1fr);gap:4px;margin-top:10px}
+.escala button{background:rgba(0,0,0,0.25);border:1px solid rgba(201,169,74,0.25);color:var(--branco);padding:10px 0;font-family:Arial,sans-serif;font-size:13px;cursor:pointer;transition:all 0.15s;border-radius:2px}
+.escala button:hover{border-color:var(--ouro);background:rgba(201,169,74,0.15)}
+.escala button.sel{background:var(--ouro);color:var(--musgo-deep);border-color:var(--ouro);font-weight:bold}
+.escala-leg{display:flex;justify-content:space-between;font-size:11px;color:var(--cinza);margin-top:6px;font-family:Arial,sans-serif}
+
+/* ====== RODA DA VIDA (grid) ====== */
+.roda-campo{background:rgba(0,0,0,0.2);border:1px solid rgba(201,169,74,0.15);padding:14px 16px;margin-bottom:10px;border-radius:2px}
+.roda-campo .roda-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.roda-campo .roda-nome{font-family:Arial,sans-serif;font-size:13px;color:var(--ouro-claro);letter-spacing:0.5px}
+.roda-campo .roda-nota{font-family:Georgia,serif;font-size:20px;color:var(--ouro);font-style:italic;min-width:30px;text-align:right}
+
+/* ====== CHECKLIST ====== */
+.checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.checklist label{display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,0.2);border:1px solid rgba(201,169,74,0.2);padding:12px 14px;cursor:pointer;font-size:14px;color:var(--branco);transition:all 0.15s;border-radius:2px;font-family:Arial,sans-serif}
+.checklist label:hover{border-color:var(--ouro);background:rgba(201,169,74,0.08)}
+.checklist label.ativo{background:rgba(201,169,74,0.2);border-color:var(--ouro)}
+.checklist input{margin-top:3px;accent-color:var(--ouro);flex-shrink:0}
+
+/* ====== BOTÕES DE OPÇÃO (perfil) ====== */
+.opcoes{display:grid;gap:10px;margin-top:8px}
+.opcoes button{text-align:left;background:rgba(0,0,0,0.25);border:1px solid rgba(201,169,74,0.25);color:var(--branco);padding:14px 16px;cursor:pointer;font-family:Georgia,serif;font-size:14px;transition:all 0.15s;border-radius:2px;line-height:1.4}
+.opcoes button:hover{border-color:var(--ouro);background:rgba(201,169,74,0.1)}
+.opcoes button.sel{background:var(--ouro);color:var(--musgo-deep);border-color:var(--ouro)}
+.opcoes button strong{display:block;margin-bottom:2px;font-size:13px;color:var(--ouro-claro);letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif}
+.opcoes button.sel strong{color:var(--musgo-deep)}
+
+/* ====== VALORES (botões pequenos, grid) ====== */
+.valores-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:10px}
+.valor-btn{background:rgba(0,0,0,0.2);border:1px solid rgba(201,169,74,0.25);color:var(--branco);padding:12px 10px;cursor:pointer;font-family:Arial,sans-serif;font-size:13px;transition:all 0.15s;border-radius:2px;position:relative;text-align:center}
+.valor-btn:hover{border-color:var(--ouro);background:rgba(201,169,74,0.1)}
+.valor-btn.sel{background:var(--ouro);color:var(--musgo-deep);border-color:var(--ouro);font-weight:bold}
+.valor-btn.sel::before{content:attr(data-pos);position:absolute;top:-8px;left:-8px;width:24px;height:24px;background:var(--musgo-deep);color:var(--ouro);border:2px solid var(--ouro);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;font-family:Georgia,serif}
+.contador{text-align:center;margin-top:16px;font-family:Arial,sans-serif;font-size:13px;color:var(--ouro);letter-spacing:1px}
+
+/* ====== TIMELINE DE ROTINA ====== */
+.timeline{display:flex;flex-direction:column;gap:2px;margin-top:12px;border:1px solid rgba(201,169,74,0.2);padding:8px;background:rgba(0,0,0,0.2);border-radius:2px}
+.tl-slot{display:grid;grid-template-columns:60px 1fr;gap:10px;align-items:center;padding:6px 4px;border-radius:2px;transition:all 0.15s}
+.tl-slot:hover{background:rgba(201,169,74,0.06)}
+.tl-hora{font-family:Arial,sans-serif;font-size:12px;color:var(--ouro);text-align:right;letter-spacing:1px}
+.tl-input{display:flex;gap:6px;align-items:center}
+.tl-input input{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(201,169,74,0.2);padding:8px 10px;color:var(--branco);font-family:Georgia,serif;font-size:13px;border-radius:2px}
+.tl-input input:focus{outline:none;border-color:var(--ouro)}
+.tl-input select{background:rgba(0,0,0,0.3);border:1px solid rgba(201,169,74,0.2);color:var(--branco);padding:8px;font-family:Arial,sans-serif;font-size:12px;border-radius:2px;cursor:pointer;width:110px}
+.tl-input select:focus{outline:none;border-color:var(--ouro)}
+
+.energia-alta{border-left:3px solid #7ec47a !important}
+.energia-media{border-left:3px solid var(--ouro) !important}
+.energia-baixa{border-left:3px solid #c47a7a !important}
+
+.tl-sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;margin-bottom:6px}
+.tl-sugestoes span{font-size:11px;color:var(--cinza);font-family:Arial,sans-serif;padding:4px 8px;background:rgba(0,0,0,0.2);border:1px solid rgba(201,169,74,0.15);border-radius:20px;cursor:pointer;transition:all 0.15s}
+.tl-sugestoes span:hover{border-color:var(--ouro);color:var(--ouro)}
+
+/* ====== FUTURO — TIMELINE HORIZONTAL ====== */
+.futuro-wrap{position:relative}
+.futuro-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px}
+.futuro-marco{flex:1;padding:12px 8px;background:rgba(0,0,0,0.2);border:1px solid rgba(201,169,74,0.2);text-align:center;cursor:pointer;border-radius:2px;transition:all 0.2s;font-family:Arial,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase}
+.futuro-marco:hover{border-color:var(--ouro);background:rgba(201,169,74,0.1)}
+.futuro-marco.ativo{background:var(--ouro);color:var(--musgo-deep);border-color:var(--ouro);font-weight:bold}
+.futuro-marco.ativo .marco-ano{color:var(--musgo-deep)}
+.marco-ano{display:block;font-size:10px;color:var(--cinza);margin-top:2px;font-weight:normal}
+.linha-tempo{height:2px;background:linear-gradient(90deg,var(--ouro) 0%,var(--ouro) var(--prog,0%),rgba(201,169,74,0.2) var(--prog,0%));margin:0 0 20px;border-radius:1px;transition:all 0.3s}
+.futuro-painel{display:none}
+.futuro-painel.ativo{display:block;animation:slideIn 0.3s ease}
+.futuro-cabecalho{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(201,169,74,0.2)}
+.futuro-cabecalho .quando{font-family:Georgia,serif;font-size:26px;color:var(--ouro);font-style:italic}
+.futuro-cabecalho .quando-sub{font-family:Arial,sans-serif;font-size:11px;color:var(--cinza);letter-spacing:2px;text-transform:uppercase}
+
+/* ====== NAVEGAÇÃO ====== */
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:10px}
+.btn{padding:14px 28px;border:none;cursor:pointer;font-family:Arial,sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;border-radius:2px}
+.btn-prim{background:var(--ouro);color:var(--musgo-deep);font-weight:bold}
+.btn-prim:hover{background:var(--ouro-claro);transform:translateY(-1px);box-shadow:0 4px 12px rgba(201,169,74,0.3)}
+.btn-sec{background:transparent;color:var(--branco);border:1px solid rgba(201,169,74,0.4)}
+.btn-sec:hover{border-color:var(--ouro);background:rgba(201,169,74,0.1)}
+.btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
+
+/* ====== ERRO ====== */
+.erro-msg{background:rgba(163,58,42,0.15);border:1px solid var(--erro);color:#e89787;padding:12px 16px;margin-bottom:20px;font-size:13px;display:none;border-radius:2px;font-family:Arial,sans-serif}
+.erro-msg.show{display:block;animation:shake 0.4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.campo.invalido input,.campo.invalido textarea{border-color:var(--erro)}
+
+/* ====== SÍNTESE DO PERFIL (destaque) ====== */
+.sintese-box{background:linear-gradient(135deg,rgba(201,169,74,0.1),rgba(61,90,58,0.15));border:1px solid var(--ouro);padding:26px;margin:24px 0;position:relative;border-radius:2px}
+.sintese-box::before{content:'❋';position:absolute;top:-14px;left:24px;background:var(--musgo-deep);color:var(--ouro);padding:0 10px;font-size:18px}
+.sintese-titulo{color:var(--ouro);font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+.sintese-corpo{font-family:Georgia,serif;font-size:15px;line-height:1.8;color:var(--branco)}
+.sintese-corpo p{margin-bottom:12px}
+.sintese-corpo strong{color:var(--ouro);font-weight:normal;font-style:italic}
+.sintese-bloco{margin-bottom:18px;padding-bottom:14px;border-bottom:1px dashed rgba(201,169,74,0.2)}
+.sintese-bloco:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+.sintese-bloco h4{color:var(--ouro-claro);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-family:Arial,sans-serif}
+
+/* ====== FINAL ====== */
+.final{text-align:center;padding:50px 30px}
+.final .check{font-size:56px;color:var(--ouro);margin-bottom:20px}
+.final h2{font-family:Georgia,serif;font-size:32px;margin-bottom:14px;font-weight:normal}
+.final h2 em{color:var(--ouro)}
+.final p{color:rgba(250,250,245,0.75);margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto}
+.acoes-final{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ====== RODAPÉ ====== */
+footer{text-align:center;padding:30px 10px 20px;font-size:11px;color:rgba(250,250,245,0.4);font-family:Arial,sans-serif;letter-spacing:1px;line-height:1.8}
+footer strong{color:var(--ouro)}
+
+/* ====== MOBILE ====== */
+@media(max-width:600px){
+  .capa h1{font-size:30px}
+  .secao{padding:24px 18px}
+  .secao-titulo{font-size:21px}
+  .escala{grid-template-columns:repeat(6,1fr)}
+  .checklist{grid-template-columns:1fr}
+  .valores-grid{grid-template-columns:repeat(2,1fr)}
+  .btn{padding:12px 18px;font-size:12px}
+  .tl-hora{font-size:11px}
+  .tl-input select{width:95px;font-size:11px}
+  .futuro-cabecalho .quando{font-size:20px}
+  .futuro-marco{font-size:10px;padding:10px 4px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== HEADER ===== -->
+<header class="brand">
+  <div class="logo">
+    <div class="logo-mark">T</div>
+    <div>
+      <div class="logo-text">Tração <span>Pro</span></div>
+      <div class="version">Life · 0.1</div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== CAPA ===== -->
+<section class="capa" id="capa">
+  <div class="label">Diagnóstico de Vida</div>
+  <h1>Tração <em>Life</em></h1>
+  <div class="ornament">❋ · ❋ · ❋</div>
+  <p>Um raio-x das áreas que movem — ou travam — o seu presente. Responda com verdade. O relatório que você receberá vale o tempo que você investir aqui.</p>
+  <div style="margin-top:30px">
+    <button class="btn btn-prim" onclick="iniciar()">Começar Diagnóstico</button>
+  </div>
+  <div style="margin-top:20px;font-size:12px;color:var(--cinza);font-family:Arial,sans-serif">⏱ Aproximadamente 18 minutos</div>
+</section>
+
+<div class="progresso" id="progresso" style="display:none"></div>
+<div class="erro-msg" id="erroMsg"></div>
+
+<!-- ========== SEÇÃO 1 — IDENTIFICAÇÃO ========== -->
+<section class="secao" data-sec="1">
+  <div class="secao-head">
+    <div class="secao-num">Seção 01 · Identificação</div>
+    <h2 class="secao-titulo">Quem é <em>você</em>?</h2>
+    <div class="secao-sub">Começamos pelo básico. Todos os campos são obrigatórios.</div>
+  </div>
+
+  <div class="campo">
+    <label>Nome completo<span class="obr">*</span></label>
+    <input type="text" id="nome" placeholder="Seu nome">
+  </div>
+  <div class="campo">
+    <label>Idade<span class="obr">*</span></label>
+    <input type="number" id="idade" min="10" max="120" placeholder="Ex: 28">
+  </div>
+  <div class="campo">
+    <label>Profissão ou Empresa<span class="obr">*</span></label>
+    <input type="text" id="profissao" placeholder="Ex: Designer na OnTake">
+  </div>
+
+  <div class="nav">
+    <div></div>
+    <button class="btn btn-prim" onclick="proximo(1)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 2 — RODA DA VIDA (12 ÁREAS) ========== -->
+<section class="secao" data-sec="2">
+  <div class="secao-head">
+    <div class="secao-num">Seção 02 · Roda da Vida</div>
+    <h2 class="secao-titulo">Onde você está <em>hoje</em></h2>
+    <div class="secao-sub">De 0 a 10, qual é a nota real de cada área agora? Sem maquiagem.</div>
+  </div>
+
+  <div id="rodaContainer"></div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(2)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(2)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 3 — VALORES DE VIDA ========== -->
+<section class="secao" data-sec="3">
+  <div class="secao-head">
+    <div class="secao-num">Seção 03 · Valores de Vida</div>
+    <h2 class="secao-titulo">O que <em>realmente</em> importa</h2>
+    <div class="secao-sub">Escolha os 5 valores que mais te representam. Depois ordene por prioridade clicando na ordem desejada.</div>
+  </div>
+
+  <div class="campo">
+    <label>Selecione seus <strong style="color:var(--ouro)">5 principais</strong> valores<span class="obr">*</span></label>
+    <div class="valores-grid" id="valoresGrid">
+      <!-- preenchido via JS -->
+    </div>
+    <div class="contador" id="contadorValores">0 / 5 selecionados</div>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(3)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(3)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 4 — SABOTADORES ========== -->
+<section class="secao" data-sec="4">
+  <div class="secao-head">
+    <div class="secao-num">Seção 04 · Sabotadores</div>
+    <h2 class="secao-titulo">O que te <em>trava</em></h2>
+    <div class="secao-sub">Marque tudo o que se reconhece. Seja honesto — é aqui que o bloqueio mora.</div>
+  </div>
+
+  <div class="campo">
+    <label>Sabotadores internos <span class="obr">*</span></label>
+    <div class="checklist" id="sabotadores">
+      <label><input type="checkbox" value="Procrastinação"> Procrastinação</label>
+      <label><input type="checkbox" value="Perfeccionismo paralisante"> Perfeccionismo paralisante</label>
+      <label><input type="checkbox" value="Medo de falhar"> Medo de falhar</label>
+      <label><input type="checkbox" value="Medo do sucesso"> Medo do sucesso</label>
+      <label><input type="checkbox" value="Autossabotagem em relacionamentos"> Autossabotagem em relacionamentos</label>
+      <label><input type="checkbox" value="Síndrome do impostor"> Síndrome do impostor</label>
+      <label><input type="checkbox" value="Comparação constante"> Comparação constante</label>
+      <label><input type="checkbox" value="Dificuldade em dizer não"> Dificuldade em dizer não</label>
+      <label><input type="checkbox" value="Indecisão crônica"> Indecisão crônica</label>
+      <label><input type="checkbox" value="Distração (redes/celular)"> Distração (redes/celular)</label>
+      <label><input type="checkbox" value="Falta de rotina"> Falta de rotina</label>
+      <label><input type="checkbox" value="Autocrítica destrutiva"> Autocrítica destrutiva</label>
+      <label><input type="checkbox" value="Excesso de trabalho sem pausa"> Excesso de trabalho sem pausa</label>
+      <label><input type="checkbox" value="Vínculos tóxicos"> Vínculos tóxicos</label>
+      <label><input type="checkbox" value="Viver pela aprovação dos outros"> Viver pela aprovação dos outros</label>
+      <label><input type="checkbox" value="Autoboicote financeiro"> Autoboicote financeiro</label>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>Outro sabotador que não foi listado</label>
+    <textarea id="sabOutro" placeholder="Opcional — se tiver algo muito específico, escreva aqui"></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(4)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(4)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 5 — CRENÇAS LIMITANTES ========== -->
+<section class="secao" data-sec="5">
+  <div class="secao-head">
+    <div class="secao-num">Seção 05 · Crenças Limitantes</div>
+    <h2 class="secao-titulo">O que você <em>acredita</em> que te limita</h2>
+    <div class="secao-sub">Frases que você, lá no fundo, acha verdadeiras sobre você ou sobre a vida.</div>
+  </div>
+
+  <div class="campo">
+    <label>Marque as crenças que, mesmo que você negue em voz alta, ainda operam em você<span class="obr">*</span></label>
+    <div class="checklist" id="crencas">
+      <label><input type="checkbox" value="Dinheiro é difícil de conquistar"> Dinheiro é difícil de conquistar</label>
+      <label><input type="checkbox" value="Gente rica é desonesta"> Gente rica é desonesta</label>
+      <label><input type="checkbox" value="Eu não sou bom o suficiente"> Eu não sou bom o suficiente</label>
+      <label><input type="checkbox" value="Eu não mereço ser feliz"> Eu não mereço ser feliz</label>
+      <label><input type="checkbox" value="Se eu crescer, vou perder pessoas"> Se eu crescer, vou perder pessoas</label>
+      <label><input type="checkbox" value="Amor dói / relacionamento é sofrimento"> Amor dói / relacionamento é sofrimento</label>
+      <label><input type="checkbox" value="Eu sempre vou acabar sozinho"> Eu sempre vou acabar sozinho</label>
+      <label><input type="checkbox" value="Sucesso exige sacrificar a saúde"> Sucesso exige sacrificar a saúde</label>
+      <label><input type="checkbox" value="Eu não nasci pra isso"> Eu não nasci pra isso</label>
+      <label><input type="checkbox" value="É tarde demais pra mim"> É tarde demais pra mim</label>
+      <label><input type="checkbox" value="Eu preciso dar conta sozinho"> Eu preciso dar conta sozinho</label>
+      <label><input type="checkbox" value="Pedir ajuda é fraqueza"> Pedir ajuda é fraqueza</label>
+      <label><input type="checkbox" value="Se eu descansar, atraso"> Se eu descansar, atraso</label>
+      <label><input type="checkbox" value="Se eu for feliz, algo ruim vai acontecer"> Se eu for feliz, algo ruim vai acontecer</label>
+      <label><input type="checkbox" value="Quem vem da minha origem não chega longe"> Quem vem da minha origem não chega longe</label>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>Outra crença sua que você identificou</label>
+    <textarea id="crencaOutra" placeholder="Opcional — alguma crença específica que você carrega"></textarea>
+  </div>
+
+  <div class="campo">
+    <label>Qual dessas crenças mais te atrapalha hoje?<span class="obr">*</span></label>
+    <textarea id="crencaPrincipal" placeholder="Escreva qual é e o que ela te impediu de fazer recentemente"></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(5)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(5)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 6 — TRAUMAS / NEUTRALIZADORES ========== -->
+<section class="secao" data-sec="6">
+  <div class="secao-head">
+    <div class="secao-num">Seção 06 · Traumas & Gatilhos</div>
+    <h2 class="secao-titulo">O que <em>neutraliza</em> você</h2>
+    <div class="secao-sub">Episódios, vínculos ou memórias que ainda drenam sua energia hoje.</div>
+  </div>
+
+  <div class="campo">
+    <label>Quais eventos do passado ainda impactam você hoje?<span class="obr">*</span></label>
+    <textarea id="traumaEventos" placeholder="Ex: perdas, rupturas, fracassos, comparações familiares..."></textarea>
+  </div>
+
+  <div class="campo">
+    <label>Quais gatilhos disparam esse peso no seu dia?<span class="obr">*</span></label>
+    <textarea id="traumaGatilhos" placeholder="Ex: certos lugares, pessoas, assuntos, datas, músicas..."></textarea>
+  </div>
+
+  <div class="campo">
+    <label>Existe algum vínculo (pessoa, lugar, hábito) que você sente que precisa cortar?<span class="obr">*</span></label>
+    <textarea id="traumaVinculo" placeholder="Se sim, qual? Se não, escreva 'não'."></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(6)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(6)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 7 — ROTINA TIMELINE ========== -->
+<section class="secao" data-sec="7">
+  <div class="secao-head">
+    <div class="secao-num">Seção 07 · Rotina Real</div>
+    <h2 class="secao-titulo">Como é seu <em>dia</em> hoje</h2>
+    <div class="secao-sub">Arrasta pelo seu dia real (das 5h às 23h). Em cada faixa, escreva o que você costuma fazer e o nível de energia. Preencha pelo menos os blocos principais.</div>
+  </div>
+
+  <div class="tl-sugestoes">
+    <span data-sug="Dormindo">Dormindo</span>
+    <span data-sug="Oração/Devocional">Oração/Devocional</span>
+    <span data-sug="Treino">Treino</span>
+    <span data-sug="Café da manhã">Café da manhã</span>
+    <span data-sug="Trabalho focado">Trabalho focado</span>
+    <span data-sug="Reuniões">Reuniões</span>
+    <span data-sug="Almoço">Almoço</span>
+    <span data-sug="Deslocamento">Deslocamento</span>
+    <span data-sug="Estudo">Estudo</span>
+    <span data-sug="Redes sociais">Redes sociais</span>
+    <span data-sug="Família">Família</span>
+    <span data-sug="Jantar">Jantar</span>
+    <span data-sug="Lazer/TV">Lazer/TV</span>
+  </div>
+
+  <div class="timeline" id="timeline"></div>
+  <div class="dica" style="font-size:12px;color:var(--cinza);margin-top:10px;font-style:italic">Clique nas tags acima pra preencher rápido. A cor na lateral indica a energia que você colocou.</div>
+
+  <div class="campo" style="margin-top:24px">
+    <label>O que mais consome seu tempo sem que você queira?<span class="obr">*</span></label>
+    <textarea id="rotLadrao" placeholder="Ex: reuniões sem propósito, redes sociais, demandas fora de hora..."></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(7)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(7)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 8 — FUTURO LINHA DO TEMPO ========== -->
+<section class="secao" data-sec="8">
+  <div class="secao-head">
+    <div class="secao-num">Seção 08 · Visão de Futuro</div>
+    <h2 class="secao-titulo">Para onde você <em>quer ir</em></h2>
+    <div class="secao-sub">A hora de planejar é a hora de sonhar. Navegue pela linha do tempo e pinte cada marco.</div>
+  </div>
+
+  <div class="futuro-wrap">
+    <div class="futuro-nav" id="futuroNav">
+      <div class="futuro-marco ativo" data-marco="hoje">Hoje<span class="marco-ano">ponto de partida</span></div>
+      <div class="futuro-marco" data-marco="6m">6 meses<span class="marco-ano">curto prazo</span></div>
+      <div class="futuro-marco" data-marco="1a">1 ano<span class="marco-ano">médio prazo</span></div>
+      <div class="futuro-marco" data-marco="5a">5 anos<span class="marco-ano">visão grande</span></div>
+    </div>
+    <div class="linha-tempo" id="linhaTempo" style="--prog:0%"></div>
+
+    <!-- PAINEL HOJE -->
+    <div class="futuro-painel ativo" data-painel="hoje">
+      <div class="futuro-cabecalho">
+        <div>
+          <div class="quando">Hoje</div>
+          <div class="quando-sub">Ponto de partida</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Em uma frase: como você descreve sua vida hoje?<span class="obr">*</span></label>
+        <textarea id="fut_hoje" placeholder="Ex: 'Trabalho muito, vejo resultados, mas não descanso.'"></textarea>
+      </div>
+    </div>
+
+    <!-- PAINEL 6M -->
+    <div class="futuro-painel" data-painel="6m">
+      <div class="futuro-cabecalho">
+        <div>
+          <div class="quando">Daqui a 6 meses</div>
+          <div class="quando-sub">Curto prazo · o que muda primeiro</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Profissional / Financeiro<span class="obr">*</span></label>
+        <textarea id="fut6_prof" placeholder="Faturamento, posição, projetos..."></textarea>
+      </div>
+      <div class="campo">
+        <label>Pessoal / Relacionamentos<span class="obr">*</span></label>
+        <textarea id="fut6_pes" placeholder="Vínculos, família, amor..."></textarea>
+      </div>
+      <div class="campo">
+        <label>Saúde / Corpo / Mente<span class="obr">*</span></label>
+        <textarea id="fut6_saude" placeholder="Rotina de corpo e emocional"></textarea>
+      </div>
+      <div class="campo">
+        <label>Espiritual<span class="obr">*</span></label>
+        <textarea id="fut6_esp" placeholder="Vida devocional, oração, chamado"></textarea>
+      </div>
+    </div>
+
+    <!-- PAINEL 1A -->
+    <div class="futuro-painel" data-painel="1a">
+      <div class="futuro-cabecalho">
+        <div>
+          <div class="quando">Daqui a 1 ano</div>
+          <div class="quando-sub">Médio prazo · onde você se vê</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Profissional / Financeiro<span class="obr">*</span></label>
+        <textarea id="fut1_prof" placeholder="Onde você quer estar?"></textarea>
+      </div>
+      <div class="campo">
+        <label>Pessoal / Relacionamentos<span class="obr">*</span></label>
+        <textarea id="fut1_pes" placeholder="Como quer estar?"></textarea>
+      </div>
+      <div class="campo">
+        <label>Saúde / Corpo / Mente<span class="obr">*</span></label>
+        <textarea id="fut1_saude" placeholder="Como quer estar?"></textarea>
+      </div>
+      <div class="campo">
+        <label>Espiritual<span class="obr">*</span></label>
+        <textarea id="fut1_esp" placeholder="Que pessoa espiritual você quer ser?"></textarea>
+      </div>
+    </div>
+
+    <!-- PAINEL 5A -->
+    <div class="futuro-painel" data-painel="5a">
+      <div class="futuro-cabecalho">
+        <div>
+          <div class="quando">Daqui a 5 anos</div>
+          <div class="quando-sub">Visão grande · legado</div>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Profissional / Financeiro<span class="obr">*</span></label>
+        <textarea id="fut5_prof" placeholder="Empresa, faturamento, legado..."></textarea>
+      </div>
+      <div class="campo">
+        <label>Pessoal / Relacionamentos<span class="obr">*</span></label>
+        <textarea id="fut5_pes" placeholder="Família, parceiros, círculo..."></textarea>
+      </div>
+      <div class="campo">
+        <label>Saúde / Corpo / Mente<span class="obr">*</span></label>
+        <textarea id="fut5_saude" placeholder="Como quer estar?"></textarea>
+      </div>
+      <div class="campo">
+        <label>Espiritual<span class="obr">*</span></label>
+        <textarea id="fut5_esp" placeholder="Quem você quer ser em Deus?"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(8)">← Voltar</button>
+    <button class="btn btn-prim" onclick="proximo(8)">Continuar →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 9 — PERFIL COMPORTAMENTAL ========== -->
+<section class="secao" data-sec="9">
+  <div class="secao-head">
+    <div class="secao-num">Seção 09 · Perfil Comportamental</div>
+    <h2 class="secao-titulo">Como você <em>age</em></h2>
+    <div class="secao-sub">Escolha a alternativa que mais se parece com você em cada situação.</div>
+  </div>
+
+  <div class="campo">
+    <label>1. No trabalho, quando recebo uma nova demanda<span class="obr">*</span></label>
+    <div class="opcoes" data-q="p1">
+      <button data-v="executor"><strong>A</strong>Já começo a executar, aprendo no caminho.</button>
+      <button data-v="analitico"><strong>B</strong>Paro e analiso tudo antes de agir.</button>
+      <button data-v="comunicador"><strong>C</strong>Converso com alguém pra trocar ideias.</button>
+      <button data-v="planejador"><strong>D</strong>Faço um plano detalhado e sigo passo a passo.</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>2. Em um conflito ou divergência<span class="obr">*</span></label>
+    <div class="opcoes" data-q="p2">
+      <button data-v="direto"><strong>A</strong>Falo direto o que penso, mesmo que gere atrito.</button>
+      <button data-v="conciliador"><strong>B</strong>Procuro mediar e encontrar o meio-termo.</button>
+      <button data-v="evitador"><strong>C</strong>Evito o conflito, prefiro não entrar.</button>
+      <button data-v="estrategico"><strong>D</strong>Espero o momento certo e argumento com dados.</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>3. Quando preciso decidir algo importante<span class="obr">*</span></label>
+    <div class="opcoes" data-q="p3">
+      <button data-v="intuitivo"><strong>A</strong>Decido rápido, pela intuição.</button>
+      <button data-v="racional"><strong>B</strong>Listo prós e contras.</button>
+      <button data-v="consultivo"><strong>C</strong>Peço opinião de pessoas de confiança.</button>
+      <button data-v="cauteloso"><strong>D</strong>Adio a decisão até ter certeza.</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>4. No relacionamento (amoroso, amizade, família)<span class="obr">*</span></label>
+    <div class="opcoes" data-q="p4">
+      <button data-v="intenso"><strong>A</strong>Sou intenso, me entrego totalmente.</button>
+      <button data-v="reservado"><strong>B</strong>Sou reservado, demoro pra abrir.</button>
+      <button data-v="leve"><strong>C</strong>Levo na leveza, sem dramatizar.</button>
+      <button data-v="protetor"><strong>D</strong>Sou protetor, cuido do outro antes de mim.</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>5. Sob pressão, eu tendo a<span class="obr">*</span></label>
+    <div class="opcoes" data-q="p5">
+      <button data-v="acelera"><strong>A</strong>Acelerar e trabalhar mais.</button>
+      <button data-v="paralisa"><strong>B</strong>Travar e procrastinar.</button>
+      <button data-v="explode"><strong>C</strong>Ficar irritado e explodir.</button>
+      <button data-v="isola"><strong>D</strong>Me isolar até resolver.</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(9)">← Voltar</button>
+    <button class="btn btn-prim" onclick="montarSintese()">Ver Síntese →</button>
+  </div>
+</section>
+
+<!-- ========== SEÇÃO 10 — SÍNTESE E CONFIRMAÇÃO ========== -->
+<section class="secao" data-sec="10">
+  <div class="secao-head">
+    <div class="secao-num">Seção 10 · Síntese</div>
+    <h2 class="secao-titulo">Seu <em>retrato</em></h2>
+    <div class="secao-sub">Abaixo está uma síntese cruzando tudo que você respondeu. Leia com calma — e, no final, diga se fez sentido.</div>
+  </div>
+
+  <div class="sintese-box" id="sinteseBox">
+    <div class="sintese-titulo">❋ Síntese do Perfil</div>
+    <div class="sintese-corpo" id="sinteseCorpo"></div>
+  </div>
+
+  <div class="campo">
+    <label>Essa síntese fez sentido pra você?<span class="obr">*</span></label>
+    <div class="opcoes" data-q="fezSentido">
+      <button data-v="total"><strong>A</strong>Total — me vi inteiro aqui.</button>
+      <button data-v="parcial"><strong>B</strong>Parcialmente — algumas partes sim, outras não.</button>
+      <button data-v="pouco"><strong>C</strong>Pouco — precisa ajustar várias coisas.</button>
+    </div>
+  </div>
+
+  <div class="campo">
+    <label>O que você corrigiria ou acrescentaria?<span class="obr">*</span></label>
+    <textarea id="correcao" placeholder="Escreva aqui o que não refletiu bem quem você é, ou o que faltou ser dito. Esse é o espaço pra ajustar antes de gerar o relatório final."></textarea>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-sec" onclick="voltar(10)">← Voltar</button>
+    <button class="btn btn-prim" onclick="gerarRelatorio()">Gerar Relatório PDF →</button>
+  </div>
+</section>
+
+<!-- ========== TELA FINAL ========== -->
+<section class="secao" data-sec="11">
+  <div class="final">
+    <div class="check">❋</div>
+    <h2>Seu diagnóstico está <em>pronto</em></h2>
+    <p>O relatório Tração Life 0.1 foi gerado. Baixe o PDF, revise com calma e compartilhe com seu mentor quando for conversar.</p>
+    <div class="acoes-final">
+      <button class="btn btn-prim" onclick="baixarPDF()">⬇ Baixar PDF</button>
+      <button class="btn btn-sec" onclick="compartilhar()">↗ Compartilhar</button>
+      <button class="btn btn-sec" onclick="reiniciar()">↻ Novo Diagnóstico</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div><strong>TRAÇÃO LIFE 0.1</strong> · Diagnóstico de Vida</div>
+  <div>© <span id="ano"></span> Jesimiel Jesaías de Barros Alves — Todos os direitos reservados</div>
+  <div style="margin-top:6px">Material proprietário. Proibida a reprodução, distribuição ou repasse total ou parcial sem autorização expressa do autor.</div>
+</footer>
+
+</div>
+
+<script>
+// ======================= CONFIGS =======================
+const TOTAL_SECOES = 10;
+let secaoAtual = 0;
+
+const AREAS_RODA = [
+  {k:'espiritualidade', n:'Espiritualidade'},
+  {k:'saude_fisica', n:'Saúde Física'},
+  {k:'equilibrio_emocional', n:'Equilíbrio Emocional'},
+  {k:'desenvolvimento_intelectual', n:'Desenvolvimento Intelectual'},
+  {k:'realizacao_profissional', n:'Realização Profissional'},
+  {k:'recursos_financeiros', n:'Recursos Financeiros'},
+  {k:'contribuicao_social', n:'Contribuição Social'},
+  {k:'familia', n:'Família'},
+  {k:'desenvolvimento_amoroso', n:'Desenvolvimento Amoroso'},
+  {k:'vida_social', n:'Vida Social'},
+  {k:'criatividade_hobbies', n:'Criatividade, Hobbies e Diversão'},
+  {k:'autoestima_motivacao', n:'Autoestima e Motivação'}
+];
+
+const VALORES = [
+  'Família','Fé','Liberdade','Honestidade','Lealdade','Crescimento',
+  'Excelência','Coragem','Disciplina','Paz','Amor','Justiça',
+  'Independência','Legado','Propósito','Gratidão','Respeito','Autenticidade',
+  'Sabedoria','Generosidade','Saúde','Prosperidade','Criatividade','Aventura',
+  'Estabilidade','Impacto','Conhecimento','Resiliência'
+];
+
+const dados = {
+  identificacao:{}, roda:{}, valores:[], sabotadores:[], sabOutro:'',
+  crencas:[], crencaOutra:'', crencaPrincipal:'',
+  traumas:{}, rotina:{timeline:{}, ladrao:''}, futuro:{}, perfil:{},
+  fezSentido:'', correcao:'', sintese:''
+};
+
+// ======================= INIT =======================
+document.getElementById('ano').textContent = new Date().getFullYear();
+
+// ----- RODA DA VIDA -----
+const rodaC = document.getElementById('rodaContainer');
+AREAS_RODA.forEach(a=>{
+  const div = document.createElement('div');
+  div.className='roda-campo';
+  div.dataset.campo=a.k;
+  div.innerHTML = `
+    <div class="roda-label">
+      <div class="roda-nome">${a.n}</div>
+      <div class="roda-nota" data-nota="${a.k}">—</div>
+    </div>
+    <div class="escala" data-escala="${a.k}"></div>
+    <div class="escala-leg"><span>0 · travado</span><span>10 · pleno</span></div>
+  `;
+  rodaC.appendChild(div);
+});
+document.querySelectorAll('[data-escala]').forEach(esc=>{
+  const k = esc.dataset.escala;
+  for(let i=0;i<=10;i++){
+    const b=document.createElement('button');
+    b.textContent=i;
+    b.onclick=(e)=>{
+      e.preventDefault();
+      esc.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      dados.roda[k]=i;
+      document.querySelector(`[data-nota="${k}"]`).textContent=i;
+    };
+    esc.appendChild(b);
+  }
+});
+
+// ----- VALORES -----
+const valGrid = document.getElementById('valoresGrid');
+VALORES.forEach(v=>{
+  const b = document.createElement('button');
+  b.className='valor-btn';
+  b.type='button';
+  b.textContent=v;
+  b.onclick=()=>toggleValor(b,v);
+  valGrid.appendChild(b);
+});
+
+function toggleValor(btn, valor){
+  const idx = dados.valores.indexOf(valor);
+  if(idx>=0){
+    dados.valores.splice(idx,1);
+    btn.classList.remove('sel');
+    btn.removeAttribute('data-pos');
+  }else{
+    if(dados.valores.length>=5){
+      mostrarErro('Você já selecionou 5 valores. Desmarque um pra escolher outro.');
+      return;
+    }
+    dados.valores.push(valor);
+    btn.classList.add('sel');
+  }
+  atualizarPosicoesValores();
+}
+
+function atualizarPosicoesValores(){
+  document.querySelectorAll('.valor-btn').forEach(b=>b.removeAttribute('data-pos'));
+  dados.valores.forEach((v,i)=>{
+    const b = Array.from(document.querySelectorAll('.valor-btn')).find(x=>x.textContent===v);
+    if(b)b.setAttribute('data-pos',(i+1)+'º');
+  });
+  document.getElementById('contadorValores').textContent = `${dados.valores.length} / 5 selecionados`;
+}
+
+// ----- SABOTADORES -----
+document.querySelectorAll('#sabotadores label').forEach(l=>{
+  const inp = l.querySelector('input');
+  inp.onchange = ()=>l.classList.toggle('ativo',inp.checked);
+});
+
+// ----- CRENÇAS -----
+document.querySelectorAll('#crencas label').forEach(l=>{
+  const inp = l.querySelector('input');
+  inp.onchange = ()=>l.classList.toggle('ativo',inp.checked);
+});
+
+// ----- TIMELINE DE ROTINA -----
+const tl = document.getElementById('timeline');
+for(let h=5;h<=23;h++){
+  const hora = String(h).padStart(2,'0')+':00';
+  const slot = document.createElement('div');
+  slot.className='tl-slot';
+  slot.dataset.hora=hora;
+  slot.innerHTML=`
+    <div class="tl-hora">${hora}</div>
+    <div class="tl-input">
+      <input type="text" placeholder="O que você faz nessa hora?" data-h="${hora}-atv">
+      <select data-h="${hora}-en">
+        <option value="">energia</option>
+        <option value="alta">⬆ Alta</option>
+        <option value="media">→ Média</option>
+        <option value="baixa">⬇ Baixa</option>
+      </select>
+    </div>
+  `;
+  tl.appendChild(slot);
+}
+
+// Tags de sugestão pra auto-preencher o campo que está em foco
+let inputFocado = null;
+tl.addEventListener('focusin',(e)=>{
+  if(e.target.tagName==='INPUT')inputFocado=e.target;
+});
+document.querySelectorAll('.tl-sugestoes span').forEach(s=>{
+  s.onclick=()=>{
+    if(inputFocado){
+      inputFocado.value = s.dataset.sug;
+      inputFocado.dispatchEvent(new Event('change'));
+    }
+  };
+});
+
+// Atualiza cor lateral conforme energia
+tl.addEventListener('change',(e)=>{
+  if(e.target.tagName==='SELECT'){
+    const slot = e.target.closest('.tl-slot');
+    slot.classList.remove('energia-alta','energia-media','energia-baixa');
+    if(e.target.value)slot.classList.add('energia-'+e.target.value);
+  }
+});
+
+// ----- FUTURO NAVEGAÇÃO -----
+document.querySelectorAll('.futuro-marco').forEach(m=>{
+  m.onclick=()=>{
+    const alvo = m.dataset.marco;
+    document.querySelectorAll('.futuro-marco').forEach(x=>x.classList.remove('ativo'));
+    document.querySelectorAll('.futuro-painel').forEach(x=>x.classList.remove('ativo'));
+    m.classList.add('ativo');
+    document.querySelector(`[data-painel="${alvo}"]`).classList.add('ativo');
+    const map = {hoje:0, '6m':33, '1a':66, '5a':100};
+    document.getElementById('linhaTempo').style.setProperty('--prog', map[alvo]+'%');
+  };
+});
+
+// ----- PERFIL -----
+document.querySelectorAll('.opcoes').forEach(grp=>{
+  const q = grp.dataset.q;
+  grp.querySelectorAll('button').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.preventDefault();
+      grp.querySelectorAll('button').forEach(x=>x.classList.remove('sel'));
+      btn.classList.add('sel');
+      const valor = btn.dataset.v;
+      const texto = btn.textContent.replace(/^[A-D]/,'').trim();
+      if(q==='fezSentido'){dados.fezSentido=valor;}
+      else{dados.perfil[q]={valor,texto};}
+    };
+  });
+});
+
+// ======================= NAVEGAÇÃO =======================
+function iniciar(){
+  document.getElementById('capa').style.display='none';
+  document.getElementById('progresso').style.display='flex';
+  montarProgresso();
+  mostrarSecao(1);
+}
+
+function montarProgresso(){
+  const prog = document.getElementById('progresso');
+  prog.innerHTML='';
+  for(let i=1;i<=TOTAL_SECOES;i++){
+    const p = document.createElement('div');
+    p.className='pill';
+    if(i<secaoAtual)p.classList.add('done');
+    if(i===secaoAtual)p.classList.add('active');
+    prog.appendChild(p);
+  }
+}
+
+function mostrarSecao(n){
+  document.querySelectorAll('.secao').forEach(s=>s.classList.remove('ativa'));
+  document.querySelector(`[data-sec="${n}"]`).classList.add('ativa');
+  secaoAtual = n;
+  montarProgresso();
+  window.scrollTo({top:0,behavior:'smooth'});
+  document.getElementById('erroMsg').classList.remove('show');
+}
+
+function mostrarErro(msg){
+  const e = document.getElementById('erroMsg');
+  e.textContent = '⚠ '+msg;
+  e.classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function proximo(sec){
+  if(!validar(sec))return;
+  salvar(sec);
+  if(sec<TOTAL_SECOES)mostrarSecao(sec+1);
+}
+
+function voltar(sec){
+  if(sec>1)mostrarSecao(sec-1);
+}
+
+// ======================= VALIDAÇÃO =======================
+function validar(sec){
+  document.querySelectorAll('.campo').forEach(c=>c.classList.remove('invalido'));
+
+  if(sec===1){
+    const n=val('nome'),i=val('idade'),p=val('profissao');
+    if(!n||!i||!p){mostrarErro('Preencha todos os campos.');marcarVazios(['nome','idade','profissao']);return false;}
+    if(isNaN(parseInt(i))||parseInt(i)<10||parseInt(i)>120){mostrarErro('Idade inválida.');return false;}
+  }
+  if(sec===2){
+    for(const a of AREAS_RODA){
+      if(dados.roda[a.k]===undefined){mostrarErro('Dê nota de 0 a 10 para todas as 12 áreas.');return false;}
+    }
+  }
+  if(sec===3){
+    if(dados.valores.length!==5){mostrarErro('Selecione exatamente 5 valores, na ordem de prioridade.');return false;}
+  }
+  if(sec===4){
+    const marcados = document.querySelectorAll('#sabotadores input:checked');
+    if(marcados.length===0){mostrarErro('Marque pelo menos um sabotador.');return false;}
+  }
+  if(sec===5){
+    const marcados = document.querySelectorAll('#crencas input:checked');
+    if(marcados.length===0){mostrarErro('Marque pelo menos uma crença limitante.');return false;}
+    if(!val('crencaPrincipal')){mostrarErro('Responda qual crença mais te atrapalha hoje.');marcarVazios(['crencaPrincipal']);return false;}
+  }
+  if(sec===6){
+    const cs=['traumaEventos','traumaGatilhos','traumaVinculo'];
+    if(cs.some(c=>!val(c))){mostrarErro('Responda todas as perguntas.');marcarVazios(cs);return false;}
+  }
+  if(sec===7){
+    const atvs = Array.from(document.querySelectorAll('[data-h$="-atv"]')).filter(i=>i.value.trim());
+    if(atvs.length<6){mostrarErro('Preencha pelo menos 6 horários do seu dia.');return false;}
+    if(!val('rotLadrao')){mostrarErro('Diga o que mais consome seu tempo.');marcarVazios(['rotLadrao']);return false;}
+  }
+  if(sec===8){
+    const cs=['fut_hoje','fut6_prof','fut6_pes','fut6_saude','fut6_esp','fut1_prof','fut1_pes','fut1_saude','fut1_esp','fut5_prof','fut5_pes','fut5_saude','fut5_esp'];
+    if(cs.some(c=>!val(c))){
+      mostrarErro('Preencha todos os marcos do futuro (Hoje, 6m, 1a e 5a).');
+      marcarVazios(cs);
+      // Ativa o painel que contém o primeiro vazio
+      for(const c of cs){
+        if(!val(c)){
+          const painelAlvo = c.startsWith('fut_hoje')?'hoje':c.startsWith('fut6')?'6m':c.startsWith('fut1')?'1a':'5a';
+          document.querySelector(`[data-marco="${painelAlvo}"]`).click();
+          break;
+        }
+      }
+      return false;
+    }
+  }
+  if(sec===9){
+    for(let i=1;i<=5;i++){
+      if(!dados.perfil['p'+i]){mostrarErro('Responda todas as 5 perguntas de perfil.');return false;}
+    }
+  }
+  if(sec===10){
+    if(!dados.fezSentido){mostrarErro('Diga se a síntese fez sentido pra você.');return false;}
+    if(!val('correcao')){mostrarErro('Escreva o que você corrigiria ou acrescentaria.');marcarVazios(['correcao']);return false;}
+  }
+  return true;
+}
+
+function marcarVazios(ids){
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && !el.value.trim()){el.closest('.campo').classList.add('invalido');}
+  });
+}
+function val(id){return (document.getElementById(id).value||'').trim();}
+
+// ======================= SALVAR =======================
+function salvar(sec){
+  if(sec===1)dados.identificacao={nome:val('nome'),idade:val('idade'),profissao:val('profissao')};
+  if(sec===4){
+    dados.sabotadores = Array.from(document.querySelectorAll('#sabotadores input:checked')).map(i=>i.value);
+    dados.sabOutro = val('sabOutro');
+  }
+  if(sec===5){
+    dados.crencas = Array.from(document.querySelectorAll('#crencas input:checked')).map(i=>i.value);
+    dados.crencaOutra = val('crencaOutra');
+    dados.crencaPrincipal = val('crencaPrincipal');
+  }
+  if(sec===6){
+    dados.traumas={eventos:val('traumaEventos'),gatilhos:val('traumaGatilhos'),vinculo:val('traumaVinculo')};
+  }
+  if(sec===7){
+    dados.rotina.timeline={};
+    for(let h=5;h<=23;h++){
+      const hora = String(h).padStart(2,'0')+':00';
+      const atv = document.querySelector(`[data-h="${hora}-atv"]`).value.trim();
+      const en = document.querySelector(`[data-h="${hora}-en"]`).value;
+      if(atv)dados.rotina.timeline[hora]={atv,en};
+    }
+    dados.rotina.ladrao = val('rotLadrao');
+  }
+  if(sec===8){
+    dados.futuro = {
+      hoje: val('fut_hoje'),
+      '6m':{prof:val('fut6_prof'),pes:val('fut6_pes'),saude:val('fut6_saude'),esp:val('fut6_esp')},
+      '1a':{prof:val('fut1_prof'),pes:val('fut1_pes'),saude:val('fut1_saude'),esp:val('fut1_esp')},
+      '5a':{prof:val('fut5_prof'),pes:val('fut5_pes'),saude:val('fut5_saude'),esp:val('fut5_esp')}
+    };
+  }
+  if(sec===10){
+    dados.correcao = val('correcao');
+  }
+}
+
+// ======================= SÍNTESE PODEROSA =======================
+function montarSintese(){
+  if(!validar(9))return;
+  salvar(9);
+
+  const nome = dados.identificacao.nome.split(' ')[0];
+  const idade = dados.identificacao.idade;
+
+  // Análises matemáticas da roda
+  const notas = AREAS_RODA.map(a=>({nome:a.n, nota:dados.roda[a.k]}));
+  notas.sort((a,b)=>a.nota-b.nota);
+  const baixas = notas.filter(n=>n.nota<=4).slice(0,3);
+  const altas = notas.filter(n=>n.nota>=8).slice(0,3);
+  const media = (notas.reduce((s,n)=>s+n.nota,0)/notas.length).toFixed(1);
+
+  // Dispersão (desvio)
+  const m = parseFloat(media);
+  const variancia = notas.reduce((s,n)=>s+Math.pow(n.nota-m,2),0)/notas.length;
+  const desvio = Math.sqrt(variancia).toFixed(1);
+
+  // Perfil composto
+  const p = dados.perfil;
+  const mapaPerfil = {
+    executor:'executor',analitico:'analítico',comunicador:'comunicador',planejador:'planejador',
+    direto:'confrontador',conciliador:'conciliador',evitador:'evitador',estrategico:'estrategista',
+    intuitivo:'intuitivo',racional:'racional',consultivo:'consultivo',cauteloso:'cauteloso',
+    intenso:'intenso',reservado:'reservado',leve:'leve',protetor:'protetor',
+    acelera:'acelerador',paralisa:'travador',explode:'explosivo',isola:'isolador'
+  };
+
+  // Arquétipo dominante
+  const tags = [p.p1?.valor, p.p2?.valor, p.p3?.valor, p.p4?.valor, p.p5?.valor];
+  let arquetipo = 'o Realizador';
+  if(tags.includes('executor')&&tags.includes('acelera'))arquetipo='o Executor Incansável';
+  else if(tags.includes('analitico')&&tags.includes('racional'))arquetipo='o Estrategista';
+  else if(tags.includes('planejador')&&tags.includes('cauteloso'))arquetipo='o Arquiteto';
+  else if(tags.includes('comunicador')&&tags.includes('intenso'))arquetipo='o Conector';
+  else if(tags.includes('protetor')&&tags.includes('conciliador'))arquetipo='o Guardião';
+  else if(tags.includes('executor')&&tags.includes('direto'))arquetipo='o Líder de Linha de Frente';
+  else if(tags.includes('intuitivo')&&tags.includes('leve'))arquetipo='o Navegador Livre';
+  else if(tags.includes('isola')&&tags.includes('analitico'))arquetipo='o Observador Profundo';
+
+  // Tensão valores × rotina × sabotadores
+  const sabs = dados.sabotadores;
+  const vals = dados.valores;
+
+  // Detecção de conflito valores × baixas
+  const conflitos = [];
+  if(vals.includes('Família') && notas.find(n=>n.nome==='Família'&&n.nota<=5))conflitos.push('você diz que Família está no seu top de valores, mas sua nota pra essa área é baixa — há um descompasso entre o que você valoriza e o que você vive.');
+  if(vals.includes('Saúde') && notas.find(n=>n.nome==='Saúde Física'&&n.nota<=5))conflitos.push('você coloca Saúde como valor, mas pontua baixo em Saúde Física — seu corpo está pagando uma conta que seu discurso não cobre.');
+  if(vals.includes('Fé') && notas.find(n=>n.nome==='Espiritualidade'&&n.nota<=5))conflitos.push('Fé está entre seus valores, mas sua Espiritualidade está baixa — há um chamado sendo silenciado pela rotina.');
+  if(vals.includes('Liberdade') && (sabs.includes('Dificuldade em dizer não')||sabs.includes('Viver pela aprovação dos outros')))conflitos.push('você valoriza Liberdade, mas seus sabotadores mostram o oposto: você vive sob a expectativa dos outros.');
+  if(vals.includes('Disciplina') && sabs.includes('Procrastinação'))conflitos.push('Disciplina é um dos seus valores, mas a procrastinação aparece como sabotador — o ideal e o real estão em rota de colisão.');
+
+  // Análise da rotina
+  let rotAnalise = '';
+  const horarios = Object.keys(dados.rotina.timeline||{});
+  const energiaBaixa = horarios.filter(h=>dados.rotina.timeline[h].en==='baixa').length;
+  const energiaAlta = horarios.filter(h=>dados.rotina.timeline[h].en==='alta').length;
+  if(energiaAlta>0 && energiaBaixa>0){
+    rotAnalise = `Seu pico de energia aparece em ${energiaAlta} faixas do dia, e você cai em ${energiaBaixa} — isso significa que existe uma janela de alta performance no seu dia que provavelmente está sendo usada pra tarefas erradas. Identificar essa janela e blindar ela pra o trabalho mais importante é uma das alavancas mais rápidas de produtividade.`;
+  }
+
+  // Análise da crença
+  let crencaAnalise = '';
+  if(dados.crencaPrincipal){
+    crencaAnalise = `A crença que você disse que mais te atrapalha — "${dados.crencaPrincipal.substring(0,150)}${dados.crencaPrincipal.length>150?'...':''}" — é o que chamamos de crença-âncora. Ela decide antes de você. Enquanto ela não for confrontada com fatos concretos da sua própria história, ela continuará sabotando cada decisão importante.`;
+  }
+
+  // Análise dos traumas
+  let tensaoTrauma = '';
+  if(dados.traumas.vinculo && dados.traumas.vinculo.toLowerCase()!=='não' && dados.traumas.vinculo.toLowerCase()!=='nao'){
+    tensaoTrauma = `Você mesmo reconheceu um vínculo que precisa ser cortado: "${dados.traumas.vinculo.substring(0,120)}${dados.traumas.vinculo.length>120?'...':''}". Reconhecer é metade do trabalho. A outra metade é ter um plano concreto — com data — pra fazer esse corte sem deixar pontas soltas.`;
+  }
+
+  // Desequilíbrio da roda
+  let rodaAnalise = '';
+  if(parseFloat(desvio)>2.5){
+    rodaAnalise = `Sua roda está <strong>muito desequilibrada</strong> (desvio ${desvio}). Existem áreas infladas enquanto outras estão no chão. Isso é fadiga — você compensa o vazio de uma área com o excesso em outra, e isso tem um custo emocional alto.`;
+  }else if(parseFloat(desvio)>1.5){
+    rodaAnalise = `Sua roda tem desequilíbrio moderado (desvio ${desvio}). Dá pra rodar, mas com atrito.`;
+  }else{
+    rodaAnalise = `Sua roda está relativamente equilibrada (desvio ${desvio}). O próximo salto não vem de corrigir, vem de elevar o patamar geral.`;
+  }
+
+  // ----- MONTAGEM DA SÍNTESE -----
+  const corpo = document.getElementById('sinteseCorpo');
+
+  let html = '';
+
+  // Bloco 1 — Arquétipo
+  html += `<div class="sintese-bloco">
+    <h4>◆ Seu Arquétipo</h4>
+    <p>${nome}, você é <strong>${arquetipo}</strong>. Aos ${idade} anos, você chega aqui combinando ${mapaPerfil[tags[0]]||'ação'} no trabalho, ${mapaPerfil[tags[1]]||'mediação'} no conflito, ${mapaPerfil[tags[2]]||'lógica'} na decisão, ${mapaPerfil[tags[3]]||'intensidade'} nos vínculos e ${mapaPerfil[tags[4]]||'aceleração'} sob pressão. Esse é o motor que te trouxe até aqui — e o mesmo motor que, dependendo de como você o usa, vai te quebrar ou te levar longe.</p>
+  </div>`;
+
+  // Bloco 2 — Onde você está
+  html += `<div class="sintese-bloco">
+    <h4>◆ O Retrato de Hoje</h4>
+    <p>Sua média geral de vida está em <strong>${media}/10</strong>. ${rodaAnalise}</p>`;
+  if(altas.length){
+    html += `<p>Suas áreas <strong>fortes</strong> são: ${altas.map(a=>a.nome+' ('+a.nota+')').join(', ')}. Proteja essas áreas — elas são seus pontos de apoio quando tudo mais oscila.</p>`;
+  }
+  if(baixas.length){
+    html += `<p>Suas áreas <strong>mais vulneráveis</strong> são: ${baixas.map(b=>b.nome+' ('+b.nota+')').join(', ')}. Não dá pra resolver tudo de uma vez, mas uma delas — escolhida com foco — pode mudar todo o resto em 90 dias.</p>`;
+  }
+  html += `</div>`;
+
+  // Bloco 3 — Valores × Realidade
+  html += `<div class="sintese-bloco">
+    <h4>◆ O Que Você Diz Que Importa</h4>
+    <p>Seus cinco valores, em ordem: <strong>${dados.valores.join(' · ')}</strong>. Esses valores deveriam ser o filtro de cada "sim" e cada "não" que você dá. Quando a rotina contradiz o valor, o valor perde — e você acorda cansado sem saber por quê.</p>`;
+  if(conflitos.length){
+    html += `<p>E aqui está a verdade incômoda: ${conflitos.map(c=>c).join(' Também, ')}</p>`;
+  }else{
+    html += `<p>Seus valores estão razoavelmente alinhados com o que você vive. Agora a tarefa é <strong>elevar o patamar</strong>, não só manter.</p>`;
+  }
+  html += `</div>`;
+
+  // Bloco 4 — O que trava
+  html += `<div class="sintese-bloco">
+    <h4>◆ O Que Te Trava</h4>
+    <p>Você reconheceu ${sabs.length} sabotador${sabs.length>1?'es':''} em você: <strong>${sabs.slice(0,5).join(', ')}</strong>${sabs.length>5?' e outros':''}. Nenhum deles é definitivo — todos são padrões aprendidos, e tudo que foi aprendido pode ser desaprendido.</p>`;
+  if(crencaAnalise){
+    html += `<p>${crencaAnalise}</p>`;
+  }
+  if(tensaoTrauma){
+    html += `<p>${tensaoTrauma}</p>`;
+  }
+  html += `</div>`;
+
+  // Bloco 5 — Rotina × Energia
+  if(rotAnalise){
+    html += `<div class="sintese-bloco">
+      <h4>◆ Como Você Usa Seu Dia</h4>
+      <p>${rotAnalise}</p>
+      ${dados.rotina.ladrao?`<p>Você mesmo identificou que <strong>"${dados.rotina.ladrao.substring(0,150)}${dados.rotina.ladrao.length>150?'...':''}"</strong> é o que rouba seu tempo. Isso não é detalhe — é o principal vazamento da sua operação pessoal.</p>`:''}
+    </div>`;
+  }
+
+  // Bloco 6 — Futuro
+  html += `<div class="sintese-bloco">
+    <h4>◆ A Ponte Para Onde Você Quer Ir</h4>
+    <p>Você descreve o hoje como: <em>"${dados.futuro.hoje.substring(0,200)}${dados.futuro.hoje.length>200?'...':''}"</em>. E projeta em 5 anos um cenário profissional assim: <em>"${dados.futuro['5a'].prof.substring(0,200)}${dados.futuro['5a'].prof.length>200?'...':''}"</em>.</p>
+    <p>Entre esses dois pontos existe uma ponte — e essa ponte não é feita de motivação, é feita de <strong>rotina, cortes e decisões semanais</strong>. O plano existe. Falta execução.</p>
+  </div>`;
+
+  // Bloco 7 — Síntese final
+  html += `<div class="sintese-bloco">
+    <h4>◆ O Diagnóstico Em Uma Frase</h4>
+    <p style="font-family:Georgia,serif;font-size:17px;font-style:italic;color:var(--ouro-claro);border-left:3px solid var(--ouro);padding-left:14px">${gerarFraseSintese(nome, arquetipo, baixas, sabs, vals)}</p>
+  </div>`;
+
+  corpo.innerHTML = html;
+  dados.sintese = corpo.innerText;
+
+  mostrarSecao(10);
+}
+
+function gerarFraseSintese(nome, arq, baixas, sabs, vals){
+  const areaFoco = baixas[0]?baixas[0].nome:'seu ponto mais travado';
+  const sabFoco = sabs[0]||'sua principal resistência';
+  const valFoco = vals[0]||'seu valor principal';
+  return `${nome}, você é ${arq.toLowerCase()} com potência de sobra — o que falta não é capacidade, é direção. Se nos próximos 90 dias você atacar <strong>${areaFoco}</strong>, confrontar <strong>${sabFoco.toLowerCase()}</strong> e usar <strong>${valFoco}</strong> como bússola de cada decisão, a próxima conversa vai ser sobre problemas maiores — que é exatamente o que você quer.`;
+}
+
+// ======================= RELATÓRIO PDF =======================
+function gerarRelatorio(){
+  if(!validar(10))return;
+  salvar(10);
+  mostrarSecao(11);
+  setTimeout(()=>{baixarPDF();},500);
+}
+
+function baixarPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt',format:'a4'});
+
+  const MUSGO=[61,90,58], OURO=[201,169,74], CINZA=[100,100,100], PRETO=[30,30,30];
+  const L=50, R=545, W=R-L;
+  let y=50;
+
+  // ===== CAPA =====
+  doc.setFillColor(...MUSGO);
+  doc.rect(0,0,595,842,'F');
+
+  doc.setTextColor(...OURO);
+  doc.setFont('times','italic');
+  doc.setFontSize(11);
+  doc.text('TRAÇÃO PRO',297.5,150,{align:'center'});
+  doc.setDrawColor(...OURO);
+  doc.line(200,170,395,170);
+
+  doc.setTextColor(250,250,245);
+  doc.setFont('times','normal');
+  doc.setFontSize(36);
+  doc.text('Tração',297.5,260,{align:'center'});
+  doc.setTextColor(...OURO);
+  doc.setFont('times','italic');
+  doc.text('Life',297.5,310,{align:'center'});
+
+  doc.setTextColor(250,250,245);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(11);
+  doc.text('DIAGNÓSTICO DE VIDA · 0.1',297.5,355,{align:'center'});
+  doc.line(250,390,345,390);
+
+  doc.setFontSize(14);
+  doc.setFont('times','italic');
+  doc.text(dados.identificacao.nome,297.5,430,{align:'center'});
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.text(`${dados.identificacao.idade} anos · ${dados.identificacao.profissao}`,297.5,450,{align:'center'});
+
+  doc.setTextColor(...OURO);
+  doc.setFontSize(9);
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  doc.text(hoje.toUpperCase(),297.5,780,{align:'center'});
+
+  // ===== FUNÇÕES AUX =====
+  function novaPagina(){
+    doc.addPage();
+    doc.setFillColor(250,250,245);
+    doc.rect(0,0,595,842,'F');
+    y=60;
+    cabecalho();
+  }
+  function cabecalho(){
+    doc.setTextColor(...OURO);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text('TRAÇÃO LIFE 0.1',L,35);
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica','normal');
+    doc.text(dados.identificacao.nome.toUpperCase(),R,35,{align:'right'});
+    doc.setDrawColor(...OURO);
+    doc.setLineWidth(0.5);
+    doc.line(L,42,R,42);
+  }
+  function rodape(){
+    doc.setTextColor(...CINZA);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text('© Jesimiel Jesaías de Barros Alves — Todos os direitos reservados. Proibido repassar.',L,810);
+    const pag=doc.internal.getCurrentPageInfo().pageNumber;
+    doc.text(String(pag),R,810,{align:'right'});
+  }
+  function tituloSecao(num,titulo){
+    if(y>720)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text(`SEÇÃO ${num}`,L,y);
+    y+=14;
+    doc.setTextColor(...PRETO);
+    doc.setFont('times','normal');
+    doc.setFontSize(20);
+    doc.text(titulo,L,y);
+    y+=8;
+    doc.setDrawColor(...OURO);
+    doc.line(L,y,L+60,y);
+    y+=20;
+  }
+  function par(label,texto){
+    if(y>760)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text(label.toUpperCase(),L,y);
+    y+=12;
+    doc.setTextColor(...PRETO);
+    doc.setFont('times','normal');
+    doc.setFontSize(11);
+    const linhas=doc.splitTextToSize(texto||'—',W);
+    linhas.forEach(ln=>{
+      if(y>790)novaPagina();
+      doc.text(ln,L,y);
+      y+=14;
+    });
+    y+=8;
+  }
+
+  // ===== PÁGINA 2 - IDENTIFICAÇÃO =====
+  novaPagina();
+  tituloSecao('01','Identificação');
+  par('Nome',dados.identificacao.nome);
+  par('Idade',dados.identificacao.idade+' anos');
+  par('Profissão',dados.identificacao.profissao);
+
+  // ===== RODA DA VIDA =====
+  y+=10;
+  tituloSecao('02','Roda da Vida');
+  AREAS_RODA.forEach(a=>{
+    if(y>760)novaPagina();
+    const nota=dados.roda[a.k];
+    doc.setTextColor(...PRETO);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text(a.n,L,y);
+    doc.setDrawColor(220,220,215);
+    doc.setFillColor(240,240,235);
+    doc.rect(L+200,y-8,240,11,'F');
+    doc.setFillColor(...OURO);
+    doc.rect(L+200,y-8,24*nota,11,'F');
+    doc.setTextColor(...PRETO);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(String(nota),L+450,y);
+    y+=18;
+  });
+  const vals=Object.values(dados.roda);
+  const media=(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+  y+=8;
+  doc.setDrawColor(...OURO);
+  doc.line(L,y,R,y);
+  y+=18;
+  doc.setTextColor(...OURO);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.text('MÉDIA GERAL',L,y);
+  doc.setTextColor(...PRETO);
+  doc.setFont('times','italic');
+  doc.setFontSize(16);
+  doc.text(media+' / 10',R,y,{align:'right'});
+  y+=28;
+
+  // ===== VALORES =====
+  if(y>680)novaPagina();
+  tituloSecao('03','Valores de Vida');
+  dados.valores.forEach((v,i)=>{
+    if(y>780)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('times','italic');
+    doc.setFontSize(14);
+    doc.text((i+1)+'º',L,y);
+    doc.setTextColor(...PRETO);
+    doc.setFont('times','normal');
+    doc.setFontSize(13);
+    doc.text(v,L+30,y);
+    y+=20;
+  });
+
+  // ===== SABOTADORES =====
+  novaPagina();
+  tituloSecao('04','Sabotadores');
+  dados.sabotadores.forEach(s=>{
+    if(y>780)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('times','normal');
+    doc.setFontSize(10);
+    doc.text('◆',L,y);
+    doc.setTextColor(...PRETO);
+    doc.setFontSize(11);
+    doc.text(s,L+14,y);
+    y+=16;
+  });
+  if(dados.sabOutro){y+=6;par('Outro',dados.sabOutro);}
+
+  // ===== CRENÇAS =====
+  y+=14;
+  tituloSecao('05','Crenças Limitantes');
+  dados.crencas.forEach(c=>{
+    if(y>780)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('times','normal');
+    doc.setFontSize(10);
+    doc.text('◆',L,y);
+    doc.setTextColor(...PRETO);
+    doc.setFontSize(11);
+    const linhas=doc.splitTextToSize(c,W-20);
+    linhas.forEach((ln,i)=>{
+      if(y>790)novaPagina();
+      doc.text(ln,L+14,y);
+      if(i<linhas.length-1)y+=14;
+    });
+    y+=16;
+  });
+  if(dados.crencaOutra){y+=6;par('Outra',dados.crencaOutra);}
+  if(dados.crencaPrincipal){y+=4;par('Crença que mais atrapalha hoje',dados.crencaPrincipal);}
+
+  // ===== TRAUMAS =====
+  novaPagina();
+  tituloSecao('06','Traumas e Gatilhos');
+  par('Eventos que ainda impactam',dados.traumas.eventos);
+  par('Gatilhos diários',dados.traumas.gatilhos);
+  par('Vínculo a cortar',dados.traumas.vinculo);
+
+  // ===== ROTINA - TIMELINE =====
+  y+=8;
+  tituloSecao('07','Rotina Real');
+  doc.setTextColor(...CINZA);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.text('Como você usa seu dia hoje:',L,y);
+  y+=18;
+
+  Object.keys(dados.rotina.timeline).forEach(h=>{
+    if(y>780)novaPagina();
+    const slot=dados.rotina.timeline[h];
+    // cor da energia
+    let corEn=[180,180,175];
+    if(slot.en==='alta')corEn=[126,196,122];
+    else if(slot.en==='media')corEn=OURO;
+    else if(slot.en==='baixa')corEn=[196,122,122];
+    doc.setFillColor(...corEn);
+    doc.rect(L,y-8,3,14,'F');
+    doc.setTextColor(...OURO);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.text(h,L+10,y);
+    doc.setTextColor(...PRETO);
+    doc.setFont('times','normal');
+    doc.setFontSize(11);
+    const atvLinhas=doc.splitTextToSize(slot.atv,W-100);
+    doc.text(atvLinhas[0]||'—',L+60,y);
+    if(slot.en){
+      doc.setTextColor(...CINZA);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8);
+      doc.text('['+slot.en.toUpperCase()+']',R-30,y,{align:'right'});
+    }
+    y+=16;
+  });
+  y+=10;
+  par('O que mais consome seu tempo',dados.rotina.ladrao);
+
+  // ===== FUTURO =====
+  novaPagina();
+  tituloSecao('08','Visão de Futuro');
+  par('Como você descreve HOJE',dados.futuro.hoje);
+
+  const prazos=[
+    {k:'6m',t:'Daqui a 6 meses'},
+    {k:'1a',t:'Daqui a 1 ano'},
+    {k:'5a',t:'Daqui a 5 anos'}
+  ];
+  prazos.forEach(pz=>{
+    if(y>680)novaPagina();
+    doc.setTextColor(...OURO);
+    doc.setFont('times','italic');
+    doc.setFontSize(14);
+    doc.text(pz.t,L,y);
+    y+=8;
+    doc.setDrawColor(...OURO);
+    doc.line(L,y,L+30,y);
+    y+=14;
+    par('Profissional / Financeiro',dados.futuro[pz.k].prof);
+    par('Pessoal / Relacionamentos',dados.futuro[pz.k].pes);
+    par('Saúde / Corpo / Mente',dados.futuro[pz.k].saude);
+    par('Espiritual',dados.futuro[pz.k].esp);
+    y+=4;
+  });
+
+  // ===== PERFIL =====
+  novaPagina();
+  tituloSecao('09','Perfil Comportamental');
+  const pergs=[
+    {q:'p1',t:'Ao receber nova demanda'},
+    {q:'p2',t:'Em um conflito'},
+    {q:'p3',t:'Ao decidir algo importante'},
+    {q:'p4',t:'Nos relacionamentos'},
+    {q:'p5',t:'Sob pressão'}
+  ];
+  pergs.forEach(pg=>par(pg.t, dados.perfil[pg.q]?.texto || '—'));
+
+  // ===== SÍNTESE (página dedicada) =====
+  novaPagina();
+  tituloSecao('10','Síntese do Perfil');
+
+  // Caixa de síntese com fundo sutil
+  doc.setFillColor(245,243,230);
+  doc.rect(L-6,y-10,W+12,4,'F');
+  doc.setFillColor(...OURO);
+  doc.rect(L-6,y-10,W+12,2,'F');
+  y+=4;
+
+  // Corpo da síntese em texto limpo
+  const sinteseTexto = dados.sintese;
+  doc.setTextColor(...PRETO);
+  doc.setFont('times','normal');
+  doc.setFontSize(11);
+  const linhas = doc.splitTextToSize(sinteseTexto, W);
+  linhas.forEach(ln=>{
+    if(y>780)novaPagina();
+    if(ln.startsWith('◆')){
+      doc.setTextColor(...OURO);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.text(ln,L,y);
+      y+=16;
+      doc.setTextColor(...PRETO);
+      doc.setFont('times','normal');
+      doc.setFontSize(11);
+    }else{
+      doc.text(ln,L,y);
+      y+=15;
+    }
+  });
+
+  // ===== FEEDBACK DO CLIENTE =====
+  novaPagina();
+  tituloSecao('11','Sua Resposta à Síntese');
+  const mapaSentido={total:'Total — me vi inteiro aqui.',parcial:'Parcialmente — algumas partes sim, outras não.',pouco:'Pouco — precisa ajustar várias coisas.'};
+  par('Fez sentido?',mapaSentido[dados.fezSentido]||'—');
+  par('O que corrigiria ou acrescentaria',dados.correcao);
+
+  // ===== PÁGINA FINAL =====
+  novaPagina();
+  y=200;
+  doc.setTextColor(...OURO);
+  doc.setFont('times','italic');
+  doc.setFontSize(14);
+  doc.text('❋',297.5,y,{align:'center'});
+  y+=50;
+  doc.setTextColor(...PRETO);
+  doc.setFont('times','normal');
+  doc.setFontSize(22);
+  doc.text('Este é seu ponto de partida.',297.5,y,{align:'center'});
+  y+=50;
+  doc.setFont('times','italic');
+  doc.setFontSize(13);
+  doc.setTextColor(...CINZA);
+  const msg=doc.splitTextToSize('Um diagnóstico não muda nada. A ação que você toma a partir dele, sim. Leve este documento para a sua próxima sessão — e deixe que ele pare de ser um PDF e comece a ser um plano.',380);
+  msg.forEach(ln=>{doc.text(ln,297.5,y,{align:'center'});y+=20;});
+
+  y=720;
+  doc.setDrawColor(...OURO);
+  doc.line(250,y,345,y);
+  y+=18;
+  doc.setTextColor(...OURO);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.text('TRAÇÃO PRO · LIFE 0.1',297.5,y,{align:'center'});
+  y+=12;
+  doc.setTextColor(...CINZA);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('© Jesimiel Jesaías de Barros Alves — Todos os direitos reservados.',297.5,y,{align:'center'});
+  y+=10;
+  doc.text('Material proprietário. Proibida a reprodução ou repasse.',297.5,y,{align:'center'});
+
+  // Rodapé em todas as páginas a partir da 2
+  const total=doc.internal.getNumberOfPages();
+  for(let i=2;i<=total;i++){
+    doc.setPage(i);
+    rodape();
+  }
+
+  const nomeArq=`Tracao_Life_${dados.identificacao.nome.replace(/\s+/g,'_')}.pdf`;
+  doc.save(nomeArq);
+  window._pdfBlob=doc.output('blob');
+  window._pdfNome=nomeArq;
+}
+
+// ======================= COMPARTILHAR =======================
+async function compartilhar(){
+  if(!window._pdfBlob){baixarPDF();setTimeout(compartilhar,800);return;}
+  if(navigator.share && navigator.canShare){
+    const file=new File([window._pdfBlob], window._pdfNome, {type:'application/pdf'});
+    if(navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:'Tração Life — Diagnóstico',text:'Meu diagnóstico Tração Life 0.1'});return;}catch(e){}
+    }
+  }
+  alert('Compartilhamento direto não disponível neste dispositivo. O PDF já foi baixado — você pode enviá-lo pelo seu gerenciador de arquivos.');
+}
+
+function reiniciar(){
+  if(confirm('Começar um novo diagnóstico? Os dados atuais serão perdidos.')){
+    location.reload();
+  }
+}
+</script>
+</body>
+</html>
