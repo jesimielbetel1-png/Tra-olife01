@@ -1,0 +1,6 @@
+# Publicação no Netlify.
+# Caminho B (via GitHub): defina o diretório de publicação como "escala".
+# Este site é HTML puro — não há passo de build.
+[build]
+  publish = "."
+  command = ""
