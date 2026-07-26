@@ -527,6 +527,7 @@
   }
 
   function exportarPdf(semana, escala, cultos) {
+    if (!window.jspdf) { toast("Exportar PDF está disponível na versão publicada (Netlify).", "error"); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     doc.setFillColor(31, 41, 55); doc.rect(0, 0, doc.internal.pageSize.getWidth(), 16, "F");
